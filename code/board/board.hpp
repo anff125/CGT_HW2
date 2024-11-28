@@ -1,13 +1,14 @@
 #ifndef __BOARD__
 #define __BOARD__ 1
 
+#include <vector> 
+
 #define RED 0
 #define BLUE 1
 
 #define PIECE_NUM 6
 
-typedef struct _board
-{
+typedef struct _board {
     // all captured: piece_bits becomes 0
     unsigned char piece_bits[2];
     int piece_position[2][PIECE_NUM];
