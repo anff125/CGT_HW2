@@ -62,13 +62,7 @@ int MCS_UCB_argmax(Board child_nodes[], int move_num) {
     int return_argmax = 0;
     float max_WR = -1;
     for (int i = 0; i < move_num; i++) {
-        float child_WR = (float)win_num[i] / (float)node_sample_num[i];
-
-        int step_id = i / PIECE_NUM;
-        int step_start_position = child_nodes[i].moves[step_id][0], step_destination = child_nodes[i].moves[step_id][1];
-        int moving_piece = child_nodes[i].board[step_start_position] - child_nodes[i].moving_color * PIECE_NUM;
-        printf("child %d move %d to %d: %d/%d, winrate:%f\n", i, moving_piece + 1, step_destination, win_num[i], node_sample_num[i], child_WR);
-
+        float child_WR = (float)win_num[i] / (float)node_sample_num[i];        
         if (child_WR > max_WR) {
             max_WR = child_WR;
             return_argmax = i;

@@ -26,6 +26,7 @@ typedef struct _board {
 
     // not basic functions, written in decide.cpp
     bool simulate();
+    bool simulate(int* moves_made_start, int* moves_made_destination, int& moves_count);
     int decide();
     int first_move_decide_dice();
 } Board;

@@ -2,6 +2,8 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "pcg_random.hpp"
+
 #include <limits>
 #include <random>
 
@@ -10,7 +12,10 @@
 #define MAX_NODES 1000000
 #define MAX_SIMULATION_COUNT 6000000
 #define BATCH_SIZE 1000
-std::mt19937 random_num(std::random_device{}());
+
+pcg_extras::seed_seq_from<std::random_device> seed_source; // Create a seed source from random_device
+pcg32 random_num(seed_source); // Pass the seed source to initialize the RNG
+
 
 struct Node {
     Board board;
@@ -21,7 +26,6 @@ struct Node {
     int move_from_parent;
     int visits;
     int wins;
-    bool is_fully_expanded;
     bool is_terminal;
 };
 
@@ -62,7 +66,7 @@ bool Board::simulate() {
                 return board_copy.moving_color != moving_color;
             }
         }
-        
+
         board_copy.move(random_num() % board_copy.move_count);
     }
     // game ends! find winner.
@@ -88,7 +92,6 @@ int MCTS(Board& root_board) {
     root_node->wins = 0;
     root_node->num_children = 0;
     root_node->is_terminal = root_board.check_winner();
-    root_node->is_fully_expanded = false;
     root_node->move_from_parent = -1;  // No move leads to the root
 
     if (root_board.dice == -1) {
@@ -114,11 +117,6 @@ int MCTS(Board& root_board) {
         // Selection
         while (!node->is_terminal && node->num_untried_moves == 0) {
             node = select_child(node);
-            if (!node) {
-                printf("select_child failed\n");
-                assert(false);
-                break;
-            }  // No valid child
             board = node->board;  // Use the board from the child node directly
         }
 
@@ -142,7 +140,6 @@ int MCTS(Board& root_board) {
                 child_node->wins = 0;
                 child_node->num_children = 0;
                 child_node->is_terminal = board.check_winner();
-                child_node->is_fully_expanded = false;
                 child_node->move_from_parent = move;
 
                 // Initialize child_node's untried moves
@@ -151,15 +148,10 @@ int MCTS(Board& root_board) {
                     child_node->num_untried_moves = board.move_count;
                 } else {
                     child_node->num_untried_moves = 0;
-                    child_node->is_fully_expanded = true;
                 }
                 child_node->board = board;
 
                 node->children[node->num_children++] = child_node;
-
-                if (node->num_untried_moves == 0) {
-                    node->is_fully_expanded = true;
-                }
 
                 node = child_node;
             }
@@ -218,11 +210,11 @@ int MCTS(Board& root_board) {
         Node* child = root_node->children[i];
         float win_rate = (float)child->wins / (float)child->visits;
 
-        // int step_id = child->move_from_parent / PIECE_NUM;
-        // int step_start_position = root_board.moves[step_id][0], step_destination = root_board.moves[step_id][1];
-        // int moving_piece = root_board.board[step_start_position] - root_board.moving_color * PIECE_NUM;
+        int step_id = child->move_from_parent / PIECE_NUM;
+        int step_start_position = root_board.moves[step_id][0], step_destination = root_board.moves[step_id][1];
+        int moving_piece = root_board.board[step_start_position] - root_board.moving_color * PIECE_NUM;
 
-        // printf("child %d move %d to %d: %d/%d, winrate:%f\n", child->move_from_parent, moving_piece + 1, step_destination, root_node->children[i]->wins, root_node->children[i]->visits, win_rate);
+        printf("child %d move %d to %d: %d/%d, winrate:%f\n", child->move_from_parent, moving_piece + 1, step_destination, root_node->children[i]->wins, root_node->children[i]->visits, win_rate);
         if (win_rate > best_win_rate) {
             best_win_rate = win_rate;
             best_move = child->move_from_parent;
