@@ -26,6 +26,10 @@ void Board::move(int id_with_dice) {
     int move_id = id_with_dice / PIECE_NUM;
     dice = id_with_dice % PIECE_NUM;
     int start = moves[move_id][0], destination = moves[move_id][1];
+    if (start == destination) {
+        moving_color ^= 1;
+        return;
+    }
     int moving_piece = board[start], dest_piece = board[destination];
     board[start] = -1;
     if (dest_piece >= 0) {
