@@ -16,7 +16,7 @@ int main() {
 #define COMMAND_UPDATE 0
 #define COMMAND_EXIT 1
 
-    struct timespec start_time, end_time; // To track wall clock time
+    struct timespec start_time, end_time;  // To track wall clock time
 
     while (true) {
         double remain_time;
@@ -25,7 +25,7 @@ int main() {
         scanf("%d", &command);
         switch (command) {
             case COMMAND_UPDATE: {
-                clock_gettime(CLOCK_MONOTONIC, &start_time); // Start timing
+                clock_gettime(CLOCK_MONOTONIC, &start_time);  // Start timing
 
                 scanf("%d", &moving_color);
                 scanf("%lf", &remain_time);
@@ -53,12 +53,12 @@ int main() {
                     fprintf(stderr, "====>%d %d %d\n", step_dice, moving_piece, step_destination);
                 }
 
-                 clock_gettime(CLOCK_MONOTONIC, &end_time); // End timing
+                clock_gettime(CLOCK_MONOTONIC, &end_time);  // End timing
 
                 // Calculate elapsed time in seconds
                 double elapsed_time = (end_time.tv_sec - start_time.tv_sec) +
                                       (end_time.tv_nsec - start_time.tv_nsec) / 1e9;
-                fprintf(stderr, "Processing time: %.9f seconds\n", elapsed_time);
+                printf("Processing time: %.9f seconds\n", elapsed_time);
 
                 break;
             }

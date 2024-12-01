@@ -1,12 +1,16 @@
 #ifndef __BOARD__
 #define __BOARD__ 1
 
-#include <vector> 
+#include <vector>
 
 #define RED 0
 #define BLUE 1
 
 #define PIECE_NUM 6
+
+enum Direction { DIAGONAL,
+                 VERTICAL,
+                 HORIZONTAL };
 
 typedef struct _board {
     // all captured: piece_bits becomes 0
@@ -26,7 +30,7 @@ typedef struct _board {
 
     // not basic functions, written in decide.cpp
     bool simulate();
-    bool simulate(int* moves_made_start, int* moves_made_destination, int& moves_count);
+    bool simulate(int* positions, Direction* directions, int* move_color, int& moves_count);
     int decide();
     int first_move_decide_dice();
 } Board;
