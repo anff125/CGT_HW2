@@ -11,7 +11,6 @@
 #define MAX_NODES 6002
 #define MAX_SIMULATION_COUNT 6000000
 #define BATCH_SIZE 1000
-#define MIN_VISITS_FOR_PRUNING 2000
 #define SEARCH_DEPTH 64
 
 pcg_extras::seed_seq_from<std::random_device> seed_source;  // Create a seed source from random_device
@@ -70,14 +69,6 @@ Node* allocate_node() {
     }
     node = &node_pool[node_pool_size++];
 
-    // Initialize the node
-    node->visits = 0;
-    node->wins = 0;
-    node->num_children = 0;
-    node->is_terminal = false;
-    node->move_from_parent = -1;
-    node->parent = nullptr;
-    node->num_untried_moves = 0;
     // Initialize RAVE statistics
     for (int i = 0; i < 25; i++) {
         for (int j = 0; j < 3; j++) {
@@ -88,89 +79,42 @@ Node* allocate_node() {
     return node;
 }
 
-const float C = sqrt(2.0);
-typedef struct {
-    int index;
-    float LCB;
-} LCBStat;
-// Comparison function for qsort
-int compare_LCB(const void* a, const void* b) {
-    float diff = ((LCBStat*)a)->LCB - ((LCBStat*)b)->LCB;
-    if (diff < 0)
-        return -1;
-    else if (diff > 0)
-        return 1;
-    else
-        return 0;
-}
-
-// Binary search function to find the smallest LCB ≥ UCB_i
-int binary_search_LCB(LCBStat lcb_stats[], int n, float UCB_i, int index_i) {
-    int left = 0, right = n - 1;
-    int pos = n;  // Default position if no LCB ≥ UCB_i is found
-
-    while (left <= right) {
-        int mid = (left + right) / 2;
-        float LCB_mid = lcb_stats[mid].LCB;
-
-        if (LCB_mid >= UCB_i) {
-            if (lcb_stats[mid].index != index_i) {
-                pos = mid;
-            }
-            right = mid - 1;
-        } else {
-            left = mid + 1;
-        }
-    }
-    return pos;
-}
+int total_pruned_num = 0;
+#define RATIO_PARAM 0.08
+#define MIN_VISITS_FOR_PRUNING 2000
 
 Node* select_child(Node* node) {
     const int num_children = node->num_children;
-    int valid_children = 0;
-
-    float UCB_values[64];
-    float LCB_values[64];
+    if (num_children == 1) {
+        return node->children[0];
+    }
+    if ((node->wins / node->visits) > 0.9) {
+        return node->children[0];
+    }
+    float averages[64];
+    float std_devs[64];
+    float left_expected_outcomes;
     int pruned[64] = {0};
 
-    LCBStat lcb_stats[64];
-
-    // Compute UCB and LCB for each child
+    float max_left_expected_outcome = -std::numeric_limits<float>::infinity();
+    int max_left_expected_outcome_index = -1;
+    // Compute average, standard deviation, and left_expected_outcome for each child
     for (int i = 0; i < num_children; i++) {
         Node* child = node->children[i];
         if (child->visits > MIN_VISITS_FOR_PRUNING) {
-            UCB_values[i] = fast_UCB(child->wins, child->visits, node->visits);
-            LCB_values[i] = fast_LCB(child->wins, child->visits, node->visits);
-            lcb_stats[valid_children].index = i;
-            lcb_stats[valid_children].LCB = LCB_values[i];
-            valid_children++;
-        } else {
-            pruned[i] = 0;
+            averages[i] = (float)child->wins / child->visits;
+            std_devs[i] = sqrtf(averages[i] * (1.0f - averages[i]));
+            left_expected_outcomes = averages[i] - RATIO_PARAM * std_devs[i];
+            if (left_expected_outcomes > max_left_expected_outcome) {
+                max_left_expected_outcome = left_expected_outcomes;
+                max_left_expected_outcome_index = i;
+            }
         }
     }
 
-    // Sort lcb_stats[] based on LCB in ascending order
-    qsort(lcb_stats, valid_children, sizeof(LCBStat), compare_LCB);
-
-    // For each child, check if it can be pruned
-    for (int idx = 0; idx < valid_children; idx++) {
-        int i = lcb_stats[idx].index;
-        if (pruned[i]) continue;
-
-        float UCB_i = UCB_values[i];
-
-        // Perform binary search to find the smallest LCB ≥ UCB_i
-        int pos = binary_search_LCB(lcb_stats, valid_children, UCB_i, i);
-
-        bool can_prune = false;
-        for (int j = pos; j < valid_children; j++) {
-            if (lcb_stats[j].index != i) {
-                can_prune = true;
-                break;
-            }
-        }
-
-        if (can_prune) {
+    for (int i = 0; i < num_children; i++) {
+        if (averages[i] + RATIO_PARAM * std_devs[i] < max_left_expected_outcome &&
+            i != max_left_expected_outcome_index && node->children[i]->visits > MIN_VISITS_FOR_PRUNING) {
             pruned[i] = 1;
         }
     }
@@ -182,6 +126,7 @@ Node* select_child(Node* node) {
             node->children[new_num_children++] = node->children[i];
         } else {
             // Optionally, free the pruned child node
+            total_pruned_num++;
         }
     }
     node->num_children = new_num_children;
@@ -257,6 +202,12 @@ bool Board::simulate(int* positions, Direction* directions, int* move_color, int
     return board_copy.moving_color == moving_color;
 }
 
+int simulation_results[BATCH_SIZE];
+int positions[BATCH_SIZE][SEARCH_DEPTH];
+Direction directions[BATCH_SIZE][SEARCH_DEPTH];
+int moves_counts[BATCH_SIZE];
+int move_color[BATCH_SIZE][SEARCH_DEPTH];
+
 int MCTS(Board& root_board) {
     node_pool_size = 0;  // Reset node pool
     Node* root_node = allocate_node();
@@ -286,6 +237,7 @@ int MCTS(Board& root_board) {
     root_node->num_untried_moves = root_board.move_count;
 
     int total_simulation_count = 0;
+
     while (total_simulation_count < MAX_SIMULATION_COUNT) {
         Node* node = root_node;
         Board board = root_board;
@@ -294,6 +246,9 @@ int MCTS(Board& root_board) {
         Node* path_nodes[SEARCH_DEPTH];
         int path_length = 0;
         while (!node->is_terminal && node->num_untried_moves == 0) {
+            if (root_node->num_children == 1) {
+                return root_node->children[0]->move_from_parent;
+            }
             node = select_child(node);
             if (node == nullptr) {
                 break;  // No valid child
@@ -342,16 +297,9 @@ int MCTS(Board& root_board) {
                 path_nodes[path_length++] = node;
             }
         }
-        if (node->num_children == 1) {
-            return node->children[0]->move_from_parent;
-        }
+
         // Simulation
         int total_simulation_result = 0;
-        int simulation_results[BATCH_SIZE];
-        int positions[BATCH_SIZE][64];
-        Direction directions[BATCH_SIZE][64];
-        int moves_counts[BATCH_SIZE];
-        int move_color[BATCH_SIZE][64];
 
         for (int sim = 0; sim < BATCH_SIZE; sim++) {
             int moves_count = 0;
@@ -372,21 +320,16 @@ int MCTS(Board& root_board) {
 
         // Update RAVE statistics
         for (int i = 0; i < path_length; i++) {
-            Node* temp_node = path_nodes[i];
+            temp_node = path_nodes[i];
             for (int sim = 0; sim < BATCH_SIZE; sim++) {
                 int moves_count = moves_counts[sim];
                 for (int j = 0; j < moves_count; j++) {
-                    int pos = positions[sim][j];
+                    int pos = temp_node->board.moving_color == BLUE ? 24 - positions[sim][j] : positions[sim][j];
                     Direction dir = directions[sim][j];
 
-                    int rave_pos = pos;
-                    if (temp_node->board.moving_color == BLUE) {
-                        rave_pos = 24 - pos;  // Adjust for BLUE player's perspective
-                    }
-
-                    temp_node->rave_visits[rave_pos][dir]++;
+                    temp_node->rave_visits[pos][dir]++;
                     if ((move_color[sim][j] == node->board.moving_color) == simulation_results[sim]) {
-                        temp_node->rave_wins[rave_pos][dir]++;
+                        temp_node->rave_wins[pos][dir]++;
                     }
                 }
             }
@@ -411,6 +354,7 @@ int MCTS(Board& root_board) {
             best_move = child->move_from_parent;
         }
     }
+    printf("total_pruned_num: %d\n", total_pruned_num);
     return best_move;
 }
 

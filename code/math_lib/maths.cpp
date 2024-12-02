@@ -2,7 +2,8 @@
 
 #include <math.h>
 // you can change it in other function
-float ucb_param_C = 1.41421;
+// float ucb_param_C = 1.41421;
+float ucb_param_C = 3.0;
 // very fast
 // using code from __builtin_clzl(unsigned long x)
 int fast_log2(unsigned long x) {
