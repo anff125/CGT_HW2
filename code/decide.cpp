@@ -205,7 +205,6 @@ bool Board::simulate(int* rave_visits, int* rave_wins) {
         int random_index = random_num() % valid_pieces_count;
         int move = valid_pieces[random_index];
         move += PIECE_NUM * (random_num() % board_copy.move_mutiplier);
-        // int move = random_num() % board_copy.move_count;
 
         // rave visited
         int move_id = move / PIECE_NUM;
@@ -218,9 +217,6 @@ bool Board::simulate(int* rave_visits, int* rave_wins) {
         board_copy.move(move);
     }
 
-    // if (board_copy.moving_color == BLUE) {
-    //     printf("RED WIN\n");
-    // }
     // Determine the winner
     if (board_copy.moving_color == moving_color) {
         // rave update
@@ -353,10 +349,9 @@ int MCTS(Board& root_board) {
         }
 
         // Backpropagation
-        // Update standard statistics
-
         Node* temp_node = node;
         while (temp_node != nullptr) {
+            // Update standard statistics
             temp_node->visits += BATCH_SIZE;
             temp_node->wins += total_simulation_result;
             total_simulation_result = BATCH_SIZE - total_simulation_result;
@@ -379,10 +374,12 @@ int MCTS(Board& root_board) {
         Node* child = root_node->children[i];
         float win_rate = (float)child->wins / (float)child->visits;
 
+        // print child info for analysis
         int step_id = child->move_from_parent / PIECE_NUM;
         int step_start_position = root_board.moves[step_id][0], step_destination = root_board.moves[step_id][1];
         int moving_piece = root_board.board[step_start_position] - root_board.moving_color * PIECE_NUM;
         printf("child %d move %d to %d: %d/%d, winrate:%f\n", child->move_from_parent, moving_piece + 1, step_destination, child->wins, child->visits, win_rate);
+
         if (win_rate > best_win_rate) {
             best_win_rate = win_rate;
             best_move = child->move_from_parent;
