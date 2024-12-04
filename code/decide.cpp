@@ -8,9 +8,9 @@
 #include "board/board.hpp"
 #include "math_lib/maths.hpp"
 #include "pcg_random.hpp"
-#define MAX_NODES 12002
-#define MAX_SIMULATION_COUNT 6000000
-#define BATCH_SIZE 500
+#define MAX_NODES 5002
+#define MAX_SIMULATION_COUNT 5000000
+#define BATCH_SIZE 1000
 #define SEARCH_DEPTH 64
 
 pcg_extras::seed_seq_from<std::random_device> seed_source;  // Create a seed source from random_device
@@ -76,7 +76,7 @@ Node* allocate_node() {
 }
 
 int total_pruned_num = 0;
-#define RATIO_PARAM 0.1
+#define RATIO_PARAM 0.08
 #define MIN_VISITS_FOR_PRUNING 3000
 
 Node* select_child(Node* node) {
@@ -218,7 +218,7 @@ bool Board::simulate(int* rave_visits, int* rave_wins) {
         board_copy.move(move);
     }
 
-        // if (board_copy.moving_color == BLUE) {
+    // if (board_copy.moving_color == BLUE) {
     //     printf("RED WIN\n");
     // }
     // Determine the winner
@@ -279,6 +279,12 @@ int MCTS(Board& root_board) {
         }
     } else {
         root_board.generate_moves();
+        for (int j = 0; j < root_board.move_count; j += PIECE_NUM) {
+            int move_id = j / PIECE_NUM;
+            if (root_board.moves[move_id][1] == 24 || root_board.moves[move_id][1] == 0) {
+                return j;
+            }
+        }
     }
 
     root_node->num_untried_moves = root_board.move_count;
@@ -294,18 +300,7 @@ int MCTS(Board& root_board) {
             if (root_node->num_children == 1) {
                 return root_node->children[0]->move_from_parent;
             }
-            for (int i = 0; i < root_node->num_children; i++) {
-                // win rate > .9 return
-                float win_rate = (float)root_node->children[i]->wins / root_node->children[i]->visits;
-                if (win_rate > 0.9) {
-                    printf("win rate: %f\n", win_rate);
-                    return root_node->children[i]->move_from_parent;
-                }
-            }
             node = select_child(node);
-            if (node == nullptr) {
-                break;  // No valid child
-            }
             board = node->board;  // Use the board from the child node directly
         }
 
