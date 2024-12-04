@@ -8,8 +8,8 @@
 #include "board/board.hpp"
 #include "math_lib/maths.hpp"
 #include "pcg_random.hpp"
-#define MAX_NODES 5002
-#define MAX_SIMULATION_COUNT 5000000
+#define MAX_NODES 3002
+#define MAX_SIMULATION_COUNT 3000000
 #define BATCH_SIZE 1000
 #define SEARCH_DEPTH 64
 
