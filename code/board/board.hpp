@@ -20,6 +20,7 @@ typedef struct _board {
     int board[25];
     char moves[PIECE_NUM][2];
     int move_count;
+    int move_mutiplier;
     char moving_color;
     char dice;
     void init_with_piecepos(int input_piecepos[2][6], char input_color);
@@ -30,7 +31,7 @@ typedef struct _board {
 
     // not basic functions, written in decide.cpp
     bool simulate();
-    bool simulate(int* positions, Direction* directions, int* move_color, int& moves_count);
+    bool simulate(int* rave_visits, int* rave_wins);
     int decide();
     int first_move_decide_dice();
 } Board;

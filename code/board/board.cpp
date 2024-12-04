@@ -70,6 +70,7 @@ void Board::generate_moves() {
         moves[i][0] = piece2_pos;
         moves[i][1] = piece2_steps[i - piece1_steps[3]];
     }
+    move_mutiplier = move_count;
     move_count *= PIECE_NUM;
     return;
 }
