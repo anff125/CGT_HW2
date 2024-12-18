@@ -22,7 +22,7 @@ void Board::init_with_piecepos(int input_piecepos[2][6], char input_color) {
         }
     }
 }
-void Board::move(int id_with_dice) {
+__host__ __device__ void Board::move(int id_with_dice) {
     int move_id = id_with_dice / PIECE_NUM;
     dice = id_with_dice % PIECE_NUM;
     int start = moves[move_id][0], destination = moves[move_id][1];
@@ -41,7 +41,7 @@ void Board::move(int id_with_dice) {
     board[destination] = moving_piece;
     moving_color ^= 1;
 }
-void Board::generate_moves() {
+__host__ __device__ void Board::generate_moves() {
     int movable_piece1, movable_piece2;
     int *piece1_steps, *piece2_steps;
     int piece1_pos, piece2_pos;
@@ -70,11 +70,11 @@ void Board::generate_moves() {
         moves[i][0] = piece2_pos;
         moves[i][1] = piece2_steps[i - piece1_steps[3]];
     }
-    move_mutiplier = move_count;
+    move_multiplier = move_count;
     move_count *= PIECE_NUM;
     return;
 }
-bool Board::check_winner() {
+__host__ __device__ bool Board::check_winner() {
     if (moving_color == RED) {
         if (piece_bits[RED] == 0 || (board[0] >= PIECE_NUM))
             return true;

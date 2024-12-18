@@ -2,7 +2,7 @@
 #define TABLE
 #define bit_mask(n) (1<<(n))
 
-const int movable_piece_table[64][6][2]={
+__constant__ int movable_piece_table[64][6][2]={
  {{-1,-1},{-1,-1},{-1,-1},{-1,-1},{-1,-1},{-1,-1}}
 ,{{ 0,-1},{ 0,-1},{ 0,-1},{ 0,-1},{ 0,-1},{ 0,-1}}
 ,{{ 1,-1},{ 1,-1},{ 1,-1},{ 1,-1},{ 1,-1},{ 1,-1}}
@@ -70,7 +70,7 @@ const int movable_piece_table[64][6][2]={
 };
 
 //format: {step1,step2,step3,length}
-const int step_table[2][25][4]=
+__constant__ int step_table[2][25][4]=
 {
     {
         { 1, 5, 6, 3},{ 2, 6, 7, 3},{ 3, 7, 8, 3},{ 4, 8, 9, 3},{ 9,-1,-1, 1},
