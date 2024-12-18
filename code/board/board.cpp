@@ -6,6 +6,10 @@
 
 #include "tables.hpp"
 
+void initialize_device_constants() {
+    cudaMemcpyToSymbol(d_movable_piece_table, h_movable_piece_table, sizeof(h_movable_piece_table));
+    cudaMemcpyToSymbol(d_step_table, h_step_table, sizeof(h_step_table));
+}
 void Board::init_with_piecepos(int input_piecepos[2][6], char input_color) {
     moving_color = input_color;
     memcpy(piece_position, input_piecepos, 12 * sizeof(int));
@@ -45,19 +49,40 @@ __host__ __device__ void Board::generate_moves() {
     int movable_piece1, movable_piece2;
     int *piece1_steps, *piece2_steps;
     int piece1_pos, piece2_pos;
-    movable_piece1 = movable_piece_table[piece_bits[moving_color]][dice][0];
+#ifdef __CUDA_ARCH__
+    movable_piece1 = d_movable_piece_table[piece_bits[moving_color]][dice][0];
+#else
+    movable_piece1 = h_movable_piece_table[piece_bits[moving_color]][dice][0];
+#endif
     // movable_piece1 will always != -1
     assert(movable_piece1 != -1);
-    movable_piece2 = movable_piece_table[piece_bits[moving_color]][dice][1];
+
+#ifdef __CUDA_ARCH__
+    movable_piece2 = d_movable_piece_table[piece_bits[moving_color]][dice][1];
+#else
+    movable_piece2 = h_movable_piece_table[piece_bits[moving_color]][dice][1];
+#endif
+
     if (movable_piece2 == -1) {
         piece1_pos = piece_position[moving_color][movable_piece1];
-        piece1_steps = (int *)step_table[moving_color][piece1_pos];
+#ifdef __CUDA_ARCH__
+        piece1_steps = (int *)d_step_table[moving_color][piece1_pos];
+#else
+        piece1_steps = (int *)h_step_table[moving_color][piece1_pos];
+#endif
         move_count = piece1_steps[3];
     } else {
         piece1_pos = piece_position[moving_color][movable_piece1];
         piece2_pos = piece_position[moving_color][movable_piece2];
-        piece1_steps = (int *)step_table[moving_color][piece1_pos];
-        piece2_steps = (int *)step_table[moving_color][piece2_pos];
+
+#ifdef __CUDA_ARCH__
+        piece1_steps = (int *)d_step_table[moving_color][piece1_pos];
+        piece2_steps = (int *)d_step_table[moving_color][piece2_pos];
+#else
+        piece1_steps = (int *)h_step_table[moving_color][piece1_pos];
+        piece2_steps = (int *)h_step_table[moving_color][piece2_pos];
+#endif
+
         move_count = piece1_steps[3] + piece2_steps[3];
     }
     // combine piece1_steps and piece2_steps

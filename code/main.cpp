@@ -15,9 +15,8 @@ int main() {
 
 #define COMMAND_UPDATE 0
 #define COMMAND_EXIT 1
-
+    initialize_device_constants();
     struct timespec start_time, end_time;  // To track wall clock time
-
     while (true) {
         double remain_time;
         int command, moving_color, dice;

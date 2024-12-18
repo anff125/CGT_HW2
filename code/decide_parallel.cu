@@ -11,7 +11,7 @@
 #include "pcg_random.hpp"
 #define MAX_NODES 3002
 #define MAX_SIMULATION_COUNT 3000000
-#define BATCH_SIZE 1000
+#define BATCH_SIZE 1024
 #define SEARCH_DEPTH 64
 
 pcg_extras::seed_seq_from<std::random_device> seed_source;  // Create a seed source from random_device
@@ -73,6 +73,58 @@ int total_pruned_num = 0;
 #define MIN_VISITS_FOR_PRUNING 5000
 
 Node* select_child(Node* node) {
+    const int num_children = node->num_children;
+    if (num_children == 1) {
+        return node->children[0];
+    }
+    float averages[64];
+    float std_devs[64];
+    float left_expected_outcomes;
+    int pruned[64] = {0};
+
+    float max_left_expected_outcome = -std::numeric_limits<float>::infinity();
+    int max_left_expected_outcome_index = -1;
+
+    // Compute average, standard deviation, and left_expected_outcome
+    for (int i = 0; i < num_children; i++) {
+        Node* child = node->children[i];
+        averages[i] = (float)child->wins / child->visits;
+        if (child->visits > MIN_VISITS_FOR_PRUNING) {
+            std_devs[i] = sqrtf(averages[i] * (1.0f - averages[i]));
+            left_expected_outcomes = averages[i] - RATIO_PARAM * std_devs[i];
+            if (left_expected_outcomes > max_left_expected_outcome) {
+                max_left_expected_outcome = left_expected_outcomes;
+                max_left_expected_outcome_index = i;
+            }
+        }
+    }
+
+    for (int i = 0; i < num_children; i++) {
+        if ((node->children[i]->visits > MIN_VISITS_FOR_PRUNING &&
+             averages[i] + RATIO_PARAM * std_devs[i] < max_left_expected_outcome &&
+             i != max_left_expected_outcome_index)) {
+            pruned[i] = 1;
+        }
+    }
+
+    // Remove pruned children
+    int new_num_children = 0;
+    for (int i = 0; i < num_children; i++) {
+        if (!pruned[i]) {
+            node->children[new_num_children++] = node->children[i];
+        } else {
+            // Optionally, free the pruned child node
+            total_pruned_num++;
+        }
+    }
+    if (new_num_children == 0) {
+        node->children[new_num_children++] = node->children[0];
+    }
+    node->num_children = new_num_children;
+    if (new_num_children == 1) {
+        return node->children[0];
+    }
+
     Node* best_child = nullptr;
     float best_value = -std::numeric_limits<float>::infinity();
 
@@ -81,10 +133,11 @@ Node* select_child(Node* node) {
         int child_visits = child->visits;
         int parent_visits = node->visits;
         float standard_value;
-
+        // Standard UCB value
         if (child_visits > 0) {
             standard_value = fast_UCB(child->wins, child_visits, parent_visits);
         } else {
+            // Encourage exploration of unvisited nodes
             standard_value = std::numeric_limits<float>::infinity();
         }
 
@@ -96,7 +149,7 @@ Node* select_child(Node* node) {
     return best_child;
 }
 
-__global__ void simulate_kernel(Board board, int* result, int batch_size, int seed) {
+__global__ void simulate_kernel(Board* board, int* result, int batch_size, int seed) {
     extern __shared__ int local_win[];  // Use dynamic shared memory for results
     int thread_id = threadIdx.x;
     int global_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -106,7 +159,7 @@ __global__ void simulate_kernel(Board board, int* result, int batch_size, int se
     curand_init(seed, global_id, 0, &rand_state);
 
     // Simulation for each thread
-    Board board_copy = board;
+    Board board_copy = *board;
     bool done = false;
 
     while (!board_copy.check_winner() && !done) {
@@ -127,7 +180,7 @@ __global__ void simulate_kernel(Board board, int* result, int batch_size, int se
         }
 
         if (valid_pieces_count == 0) {
-            local_win[thread_id] = (board_copy.moving_color == board.moving_color) ? 1 : 0;
+            local_win[thread_id] = (board_copy.moving_color == (*board).moving_color) ? 1 : 0;
             done = true;
             break;
         }
@@ -142,7 +195,7 @@ __global__ void simulate_kernel(Board board, int* result, int batch_size, int se
 
     // Final winner check if simulation was incomplete
     if (!done) {
-        local_win[thread_id] = (board_copy.moving_color == board.moving_color) ? 1 : 0;
+        local_win[thread_id] = (board_copy.moving_color == (*board).moving_color) ? 1 : 0;
     }
 
     // Reduction to aggregate results in shared memory
@@ -204,11 +257,14 @@ int MCTS(Board& root_board) {
         Node* node = root_node;
         Board board = root_board;
 
+        printf("total_simulation_count: %d\n", total_simulation_count);
+
         while (!node->is_terminal && node->num_untried_moves == 0) {
             if (root_node->num_children == 1) {
                 return root_node->children[0]->move_from_parent;
             }
             node = select_child(node);
+            assert(node);
             board = node->board;
         }
 
@@ -255,8 +311,20 @@ int MCTS(Board& root_board) {
         int batch_size = 256;  // Number of threads per block
         int num_blocks = (BATCH_SIZE + batch_size - 1) / batch_size;
         int shared_mem_size = batch_size * sizeof(int);
-        simulate_kernel<<<num_blocks, batch_size, shared_mem_size>>>(board, d_result, batch_size, time(NULL));
-        
+        simulate_kernel<<<num_blocks, batch_size, shared_mem_size>>>(d_board, d_result, batch_size, time(NULL));
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
+            return -1;
+        }
+        // Synchronize
+        cudaDeviceSynchronize();
+        err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
+            return -1;
+        }
+        printf("after kernel, simulation_count: %d\n", total_simulation_count);
         // Copy data back to host
         int total_simulation_result;
         cudaMemcpy(&total_simulation_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);

@@ -3,8 +3,9 @@ CXX := g++
 NVCC := nvcc
 
 # Compiler flags
-CXXFLAGS := -std=c++11 -O2 -Wall
-NVCCFLAGS := -O2 -arch=sm_60
+CXXFLAGS := -std=c++11 -O2 -Wall -g
+NVCCFLAGS := -O2 -arch=sm_86 -rdc=true -g
+
 
 # Directories
 SRC_DIR := .
@@ -29,11 +30,11 @@ all: $(TARGET)
 
 # Link object files to create the executable
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(NVCC) $(NVCCFLAGS) -o $@ $^
 
 # Compile C++ source files into object files
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(NVCC) $(NVCCFLAGS) -x cu -c -o $@ $<
 
 # Compile CUDA source files into object files
 %.o: %.cu

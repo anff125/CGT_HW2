@@ -9,7 +9,7 @@
 #define BLUE 1
 
 #define PIECE_NUM 6
-
+void initialize_device_constants();
 enum Direction { DIAGONAL,
                  VERTICAL,
                  HORIZONTAL };
