@@ -465,7 +465,7 @@ int MCTS(Board& root_board) {
             max_depth = nodes[selected_node].depth;
 
         // 1.5: check if it's a terminal node 
-        if (nodes[selected_node].has_win)  // leaf lose
+        if (nodes[selected_node].has_win)       // root win
         {   
             simulation_num += SIMULATION_BATCH_NUM * 3;
             backpropagate(selected_node, SIMULATION_BATCH_NUM * 3, SIMULATION_BATCH_NUM * 3);
@@ -476,8 +476,7 @@ int MCTS(Board& root_board) {
             #endif
             continue;
         }
-        // root lose
-        else if (nodes[selected_node].has_lose)
+        else if (nodes[selected_node].has_lose) // root lose
         {
             simulation_num += SIMULATION_BATCH_NUM * 3;
             backpropagate(selected_node, 0, SIMULATION_BATCH_NUM * 3);
@@ -563,27 +562,6 @@ int MCTS(Board& root_board) {
         //         // }
         //         node_sample_num += SIMULATION_BATCH_NUM;
         //     }
-
-        //     // Check if the state(board) is explored before
-        //     // int hash_index = hash_move(hash_key, leaf_board, i) % TT_TABLE_SIZE;
-        //     // if (TT[hash_index].samples) 
-        //     // {
-        //     //     if (TT[hash_index].samples >= 18 * SIMULATION_BATCH_NUM)
-        //     //     {
-        //     //         int multiple = TT[hash_index].samples / SIMULATION_BATCH_NUM;
-        //     //         node_win_num = TT[hash_index].wins / multiple;
-        //     //     }else
-        //     //     {
-        //     //         int multiple = TT[hash_index].samples / SIMULATION_BATCH_NUM;
-        //     //         TT[hash_index].wins += node_win_num;
-        //     //         TT[hash_index].samples += node_sample_num;
-        //     //         node_win_num = (TT[hash_index].wins) / (multiple + 1);
-        //     //     }
-        //     // }
-        //     // else{
-        //     //     TT[hash_index].samples = node_sample_num;
-        //     //     TT[hash_index].wins = node_win_num;
-        //     // }
             
         //     update_node(child_idx, node_win_num, node_sample_num);
 
@@ -638,6 +616,9 @@ int MCTS(Board& root_board) {
     #ifdef USE_AMAF
         fprintf(stderr, "amaf total samples: %d\n", nodes[0].AMAF_Ntotal);
     #endif
+
+    cudaFree(d_board);
+    cudaFree(d_node_win_num);
 
     return best_move;
 }
