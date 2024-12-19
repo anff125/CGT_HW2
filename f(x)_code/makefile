@@ -1,11 +1,13 @@
-# Compiler
-CXX := g++
+# Ignored warnings
+IGNORED_WARNINGS = -Wno-unused-result -Wno-uninitialized -Wno-char-subscripts
+OPENMP = -fopenmp
+
+# Compiler and flags
+CXX = g++
 NVCC := nvcc
 
-# Compiler flags
-CXXFLAGS := -std=c++17 -O2 -Wall -g
-NVCCFLAGS := -O2 -arch=sm_86 -rdc=true -g
-
+CXXFLAGS = -O2 -Wall $(IGNORED_WARNINGS) $(OPENMP)
+NVCCFLAGS := -O2 -arch=sm_86 -rdc=true
 
 # Directories
 SRC_DIR := .
@@ -16,20 +18,20 @@ MATH_LIB_DIR := math_lib
 SRCS := $(SRC_DIR)/main.cpp \
         $(BOARD_DIR)/board.cpp \
         $(MATH_LIB_DIR)/maths.cpp \
-        $(SRC_DIR)/decide_parallel.cu
+        $(SRC_DIR)/decide_cuda.cu
 
 # Object files
 OBJS := $(SRCS:.cpp=.o)
 OBJS := $(OBJS:.cu=.o)
 
 # Executable name
-TARGET := cgt_hw2
+TARGET := cuda_agent
 
-# Default target
+# Default target: build without AMAF
 all: $(TARGET)
 
 # Link object files to create the executable
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS)	
 	$(NVCC) $(NVCCFLAGS) -o $@ $^
 
 # Compile C++ source files into object files
@@ -40,6 +42,16 @@ $(TARGET): $(OBJS)
 %.o: %.cu
 	$(NVCC) $(NVCCFLAGS) -c -o $@ $<
 
-# Clean up generated files
+# Target with AMAF
+rave:
+	$(CXX) *.cpp */*.cpp -o agent $(CXXFLAGS) -DUSE_AMAF
+
+# Clean up
 clean:
 	rm -f $(OBJS) $(TARGET)
+
+# ./agent
+# 0 0 0
+# 1 10 6 0 5 2
+# 23 14 18 24 19 22
+# 1

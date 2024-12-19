@@ -250,6 +250,7 @@ int MCTS(Board& root_board) {
 
     Board* d_board;
     int* d_result;
+    int h_result = 0;
     cudaMalloc(&d_board, sizeof(Board));
     cudaMalloc(&d_result, sizeof(int));
 
@@ -257,7 +258,7 @@ int MCTS(Board& root_board) {
         Node* node = root_node;
         Board board = root_board;
 
-        printf("total_simulation_count: %d\n", total_simulation_count);
+        // printf("total_simulation_count: %d\n", total_simulation_count);
 
         while (!node->is_terminal && node->num_untried_moves == 0) {
             if (root_node->num_children == 1) {
@@ -306,6 +307,7 @@ int MCTS(Board& root_board) {
 
         // Copy data to device
         cudaMemcpy(d_board, &(node->board), sizeof(Board), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_result, &h_result, sizeof(int), cudaMemcpyHostToDevice);
         // Launch kernel
 
         int batch_size = 256;  // Number of threads per block
@@ -324,7 +326,7 @@ int MCTS(Board& root_board) {
             fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
             return -1;
         }
-        printf("after kernel, simulation_count: %d\n", total_simulation_count);
+        // printf("after kernel, simulation_count: %d\n", total_simulation_count);
         // Copy data back to host
         int total_simulation_result;
         cudaMemcpy(&total_simulation_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
