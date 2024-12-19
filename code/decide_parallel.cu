@@ -9,11 +9,22 @@
 #include "board/board.hpp"
 #include "math_lib/maths.hpp"
 #include "pcg_random.hpp"
-#define MAX_NODES 3002
-#define MAX_SIMULATION_COUNT 3000000
-#define BATCH_SIZE 1024
+#define MAX_NODES 120000
+#define MAX_SIMULATION_COUNT 393216000
+#define BATCH_SIZE 32768
 #define SEARCH_DEPTH 64
-
+#define CHECK_CUDA(call)                                                      \
+    do {                                                                      \
+        cudaError_t err = call;                                               \
+        if (err != cudaSuccess) {                                             \
+            fprintf(stderr, "CUDA Error:\n");                                 \
+            fprintf(stderr, "    File:       %s\n", __FILE__);                \
+            fprintf(stderr, "    Line:       %d\n", __LINE__);                \
+            fprintf(stderr, "    Error code: %d\n", err);                     \
+            fprintf(stderr, "    Error text: %s\n", cudaGetErrorString(err)); \
+            exit(EXIT_FAILURE);                                               \
+        }                                                                     \
+    } while (0)
 pcg_extras::seed_seq_from<std::random_device> seed_source;  // Create a seed source from random_device
 pcg32 random_num(seed_source);                              // Pass the seed source to initialize the RNG
 
@@ -70,7 +81,7 @@ Node* allocate_node() {
 
 int total_pruned_num = 0;
 #define RATIO_PARAM 0.125
-#define MIN_VISITS_FOR_PRUNING 5000
+#define MIN_VISITS_FOR_PRUNING 163840
 
 Node* select_child(Node* node) {
     const int num_children = node->num_children;
@@ -148,16 +159,15 @@ Node* select_child(Node* node) {
     }
     return best_child;
 }
+__global__ void setup_kernel(curandState* state, unsigned long seed) {
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    curand_init(seed, id, 0, &state[id]);
+}
 
-__global__ void simulate_kernel(Board* board, int* result, int batch_size, int seed) {
+__global__ void simulate_kernel(curandState* state, Board* board, int* result, int batch_size) {
     extern __shared__ int local_win[];  // Use dynamic shared memory for results
     int thread_id = threadIdx.x;
-    int global_id = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // Initialize cuRAND state for random number generation
-    curandState rand_state;
-    curand_init(seed, global_id, 0, &rand_state);
-
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
     // Simulation for each thread
     Board board_copy = *board;
     bool done = false;
@@ -185,10 +195,12 @@ __global__ void simulate_kernel(Board* board, int* result, int batch_size, int s
             break;
         }
 
+        // Copy state to local memory for efficiency
+        curandState localState = state[id];
         // Pick a random valid piece and move
-        int random_index = curand(&rand_state) % valid_pieces_count;
+        int random_index = curand(&localState) % valid_pieces_count;
         int move = valid_pieces[random_index];
-        move += PIECE_NUM * (curand(&rand_state) % board_copy.move_multiplier);
+        move += PIECE_NUM * (curand(&localState) % board_copy.move_multiplier);
 
         board_copy.move(move);
     }
@@ -201,7 +213,7 @@ __global__ void simulate_kernel(Board* board, int* result, int batch_size, int s
     // Reduction to aggregate results in shared memory
     __syncthreads();
     for (int stride = batch_size / 2; stride > 0; stride >>= 1) {
-        if (thread_id < stride) {
+        if (thread_id + stride < batch_size) {
             local_win[thread_id] += local_win[thread_id + stride];
         }
         __syncthreads();
@@ -212,6 +224,7 @@ __global__ void simulate_kernel(Board* board, int* result, int batch_size, int s
         atomicAdd(result, local_win[0]);
     }
 }
+int call_times = 1;
 
 int MCTS(Board& root_board) {
     node_pool_size = 0;
@@ -253,11 +266,23 @@ int MCTS(Board& root_board) {
     cudaMalloc(&d_board, sizeof(Board));
     cudaMalloc(&d_result, sizeof(int));
 
-    while (total_simulation_count < MAX_SIMULATION_COUNT) {
+    int batch_size = 512;  // Number of threads per block
+    int num_blocks = (BATCH_SIZE + batch_size - 1) / batch_size;
+    int shared_mem_size = batch_size * sizeof(int);
+
+    curandState* devStates;
+    cudaMalloc((void**)&devStates, BATCH_SIZE * sizeof(curandState));
+    setup_kernel<<<num_blocks, batch_size>>>(devStates, time(NULL));
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaDeviceSynchronize());
+
+    call_times++;
+    int this_trial = MAX_SIMULATION_COUNT / (call_times / 2);
+
+    printf("this_trial: %d\n", this_trial);
+    while (total_simulation_count < this_trial) {
         Node* node = root_node;
         Board board = root_board;
-
-        printf("total_simulation_count: %d\n", total_simulation_count);
 
         while (!node->is_terminal && node->num_untried_moves == 0) {
             if (root_node->num_children == 1) {
@@ -304,27 +329,13 @@ int MCTS(Board& root_board) {
             }
         }
 
-        // Copy data to device
         cudaMemcpy(d_board, &(node->board), sizeof(Board), cudaMemcpyHostToDevice);
-        // Launch kernel
+        cudaMemset(d_result, 0, sizeof(int));
 
-        int batch_size = 256;  // Number of threads per block
-        int num_blocks = (BATCH_SIZE + batch_size - 1) / batch_size;
-        int shared_mem_size = batch_size * sizeof(int);
-        simulate_kernel<<<num_blocks, batch_size, shared_mem_size>>>(d_board, d_result, batch_size, time(NULL));
-        cudaError_t err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
-            return -1;
-        }
-        // Synchronize
-        cudaDeviceSynchronize();
-        err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
-            return -1;
-        }
-        printf("after kernel, simulation_count: %d\n", total_simulation_count);
+        simulate_kernel<<<num_blocks, batch_size, shared_mem_size>>>(devStates, d_board, d_result, batch_size);
+        CHECK_CUDA(cudaGetLastError());
+        CHECK_CUDA(cudaDeviceSynchronize());
+
         // Copy data back to host
         int total_simulation_result;
         cudaMemcpy(&total_simulation_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
