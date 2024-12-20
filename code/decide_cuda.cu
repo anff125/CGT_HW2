@@ -1,10 +1,10 @@
 // These are not basic function for board.
 // write them in separate file makes code cleaner.
 // I recommend write all your complicated algorithms in this file.
-// Or sort them into even more files to make code even cleaner! 
+// Or sort them into even more files to make code even cleaner!
+#include <curand_kernel.h>
 #include <omp.h>
 #include "board/board.hpp"
-#include "board/tables.hpp"
 #include "math_lib/maths.hpp"
 #include <stdio.h>
 #include <random>
@@ -13,13 +13,13 @@
 #include <unordered_set>
 #include <time.h>
 
-#define SIMULATION_BATCH_NUM 500
-#define MAX_SIMULATION_COUNT 10000000
+#define SIMULATION_BATCH_NUM 1024
+#define MAX_SIMULATION_COUNT 200000000
 #define RAVE_MAX_PLAYOUT 40000
 // beta becomes small after N > 1/6 MAX_SIMULATION_COUNT
 #define RAVE_4B_SQUARE 0.0005
 #define MAX_CHILD 36
-#define MAX_NODE 25000
+#define MAX_NODE 220000
 #define MAX_DEPTH 32
 #define MINIMAL_SIMULATION_COUNT 150
 #define PRUNING_THRESHOLD 0.2
@@ -58,7 +58,7 @@ double remain_time;
 int cur_round = 0;
 int max_round = 13;
 
-bool winner_table[2][3] =
+__constant__ bool winner_table[2][3] =
 {
     {false, true, false},
     {false, false, true}
@@ -68,6 +68,7 @@ bool winner_table[2][3] =
 Node nodes[MAX_NODE];
 Board child_boards[MAX_CHILD];
 float child_probability[MAX_CHILD];
+int h_node_win_num[MAX_CHILD];
 int num_of_nodes = 0;
 
 std::mt19937 random_num(std::random_device{}());
@@ -218,6 +219,7 @@ void expand(int idx, Board& board) {
         Board board_copy = board;
         board_copy.move(i);
         init_node(num_of_nodes, board_copy);
+        child_boards[i] = board_copy;
 
         char result;
         if ((result = board_copy.check_winner()) != NOT_YET)
@@ -355,6 +357,76 @@ void AMAF_backpropagate(int idx, int wins, int samples, int move)
 }
 #endif
 
+__global__ void simulate_kernel(Board* child_boards, int* node_win_nums, int seed, char root_color) {
+    // Shared memory for storing temporary win counts for a block
+    extern __shared__ int local_win_counts[];
+
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
+    int global_id = bid * blockDim.x + tid;
+
+    // Each thread simulates for one child node and multiple simulations
+    curandState rand_state;
+    curand_init(seed, global_id, 0, &rand_state);
+
+    Board board_copy = child_boards[bid];
+    int valid_pieces[PIECE_NUM];
+    char result;
+    // run until game ends.
+    while ((result = board_copy.check_winner()) == NOT_YET)
+    {
+        board_copy.generate_moves();
+        int valid_pieces_count = 0;
+
+        for (int valid_piece = 0; valid_piece < PIECE_NUM; ++valid_piece)
+        {
+            int pos = board_copy.piece_position[board_copy.moving_color ^ 1][valid_piece];
+            if (pos == -1) continue;
+            if (board_copy.moving_color == BLUE) {
+                pos = 24 - pos;
+            }
+            if (pos != 1 && pos != 5 && pos != 6) {
+                valid_pieces[valid_pieces_count++] = valid_piece;
+            }
+        }
+
+        // If no valid moves are available, break the loop
+        if (valid_pieces_count == 0) {
+            if (board_copy.moving_color == RED)
+                result = BLUE_WIN;
+            else
+                result = RED_WIN;
+            break;
+        }
+
+        int selected_piece = valid_pieces[curand(&rand_state) % valid_pieces_count];
+        int move_id = board_copy.move_count / PIECE_NUM;
+        int ply = (curand(&rand_state) % move_id) * PIECE_NUM + selected_piece;
+
+        // fprintf(stderr, "piece: %d, move_id: %d, ply: %d\n", selected_piece,
+        //                             move_id, ply);
+
+        board_copy.move(ply);
+    }
+
+    // Store thread's result in shared memory
+    local_win_counts[tid] = winner_table[root_color][result] ? 1 : 0;
+    __syncthreads();
+
+    // Reduction within the block to calculate total wins
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            local_win_counts[tid] += local_win_counts[tid + stride];
+        }
+        __syncthreads();
+    }
+
+    // Atomic add to update global win counts and sample counts
+    if (tid == 0) {
+        node_win_nums[bid] = local_win_counts[0];
+    }
+}
+
 // Monte Carlo Tree Search algorithm
 int MCTS(Board& root_board) {
     if (max_round - cur_round <= 3)
@@ -367,10 +439,16 @@ int MCTS(Board& root_board) {
 
     int root_idx = 0;
     int simulation_num = 0;
+    int real_simulation_num = 0;
     //  __uint128_t root_key = hash_board(root_board);
 
     init_node(root_idx, root_board);
     num_of_nodes = 1;
+
+    Board* d_board;
+    int* d_node_win_num;
+    cudaMalloc(&d_board, MAX_CHILD * sizeof(Board));
+    cudaMalloc(&d_node_win_num, MAX_CHILD * sizeof(int));
 
     int max_depth = 1;
     while (simulation_num < MAX_SIMULATION_COUNT)
@@ -379,7 +457,7 @@ int MCTS(Board& root_board) {
         clock_gettime(CLOCK_REALTIME, &end);
         double wall_clock_in_seconds = (double)((end.tv_sec+end.tv_nsec*1e-9) -
                                        (double)(start.tv_sec+start.tv_nsec*1e-9));
-        if (wall_clock_in_seconds > availible_time)
+        if (wall_clock_in_seconds > 2.0)
             break;
 
         // 1: Selection
@@ -389,7 +467,7 @@ int MCTS(Board& root_board) {
             max_depth = nodes[selected_node].depth;
 
         // 1.5: check if it's a terminal node 
-        if (nodes[selected_node].has_win)  // leaf lose
+        if (nodes[selected_node].has_win)       // root win
         {   
             simulation_num += SIMULATION_BATCH_NUM * 3;
             backpropagate(selected_node, SIMULATION_BATCH_NUM * 3, SIMULATION_BATCH_NUM * 3);
@@ -400,8 +478,7 @@ int MCTS(Board& root_board) {
             #endif
             continue;
         }
-        // root lose
-        else if (nodes[selected_node].has_lose)
+        else if (nodes[selected_node].has_lose) // root lose
         {
             simulation_num += SIMULATION_BATCH_NUM * 3;
             backpropagate(selected_node, 0, SIMULATION_BATCH_NUM * 3);
@@ -422,71 +499,94 @@ int MCTS(Board& root_board) {
         int total_sample_num = 0;
         int total_win_num = 0;
         // use node.Nchild here, not board.move_count!
+        // GPU version
+        int Nchild = nodes[selected_node].Nchild;
+        if (Nchild == 1) {
+            cudaMemcpy(&d_board[0], &(nodes[nodes[selected_node].c_idx[0]].board), sizeof(Board), cudaMemcpyHostToDevice);
+        }
+        else
+            cudaMemcpy(d_board, child_boards, Nchild * sizeof(Board), cudaMemcpyHostToDevice);
+        // for (int i = 0; i < Nchild; i++) {
+        //     int child_idx = nodes[selected_node].c_idx[i];
+        //     cudaMemcpy(&d_board[i], &(nodes[child_idx].board), sizeof(Board), cudaMemcpyHostToDevice);
+        // }
+        
+        int shmemSize = SIMULATION_BATCH_NUM * sizeof(int);
+        simulate_kernel<<<Nchild, SIMULATION_BATCH_NUM, shmemSize>>>(
+                    d_board, d_node_win_num, time(NULL), root_board.moving_color);
+        cudaDeviceSynchronize();
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
+            return -1;
+        }  
+        cudaMemcpy(h_node_win_num, d_node_win_num, Nchild * sizeof(int), cudaMemcpyDeviceToHost);                          
+
+        for (int i = 0; i < Nchild; i++) {
+            int child_idx = nodes[selected_node].c_idx[i];
+            total_sample_num += SIMULATION_BATCH_NUM;
+            real_simulation_num += SIMULATION_BATCH_NUM;
+            total_win_num += h_node_win_num[i];
+            update_node(child_idx, h_node_win_num[i], SIMULATION_BATCH_NUM);
+        }
+        
         // Parallelize the for loop using OpenMP
         // #pragma omp parallel for reduction(+:total_sample_num, total_win_num)
-        for (int i = 0; i < nodes[selected_node].Nchild; i++)
-        {
-            int child_idx = nodes[selected_node].c_idx[i];
-            int node_sample_num = 0;
-            int node_win_num = 0;
-            if (nodes[child_idx].has_win)
-            {
-                node_sample_num = SIMULATION_BATCH_NUM;
-                node_win_num = SIMULATION_BATCH_NUM;
-            }
-            else if (nodes[child_idx].has_lose)
-            {
-                node_sample_num = SIMULATION_BATCH_NUM;
-                node_win_num = 0;
-            }
-            else{
-                for (int j = 0; j < SIMULATION_BATCH_NUM; j++)
-                {
-                    child_boards[i] = nodes[child_idx].board;
-                    if (child_boards[i].simulate(root_board.moving_color) == true)
-                    {
-                        node_win_num += 1;
-                    }
-                }
-                node_sample_num += SIMULATION_BATCH_NUM;
-            }
+        // for (int i = 0; i < nodes[selected_node].Nchild; i++)
+        // {
+        //     int child_idx = nodes[selected_node].c_idx[i];
+        //     int node_sample_num = 0;
+        //     int node_win_num = 0;
+        //     if (nodes[child_idx].has_win)
+        //     {
+        //         node_sample_num = SIMULATION_BATCH_NUM;
+        //         node_win_num = SIMULATION_BATCH_NUM;
+        //     }
+        //     else if (nodes[child_idx].has_lose)
+        //     {
+        //         node_sample_num = SIMULATION_BATCH_NUM;
+        //         node_win_num = 0;
+        //     }
+        //     else{
+        //         cudaMemcpy(d_board, &(nodes[child_idx].board), sizeof(Board), cudaMemcpyHostToDevice);
 
-            // Check if the state(board) is explored before
-            // int hash_index = hash_move(hash_key, leaf_board, i) % TT_TABLE_SIZE;
-            // if (TT[hash_index].samples) 
-            // {
-            //     if (TT[hash_index].samples >= 18 * SIMULATION_BATCH_NUM)
-            //     {
-            //         int multiple = TT[hash_index].samples / SIMULATION_BATCH_NUM;
-            //         node_win_num = TT[hash_index].wins / multiple;
-            //     }else
-            //     {
-            //         int multiple = TT[hash_index].samples / SIMULATION_BATCH_NUM;
-            //         TT[hash_index].wins += node_win_num;
-            //         TT[hash_index].samples += node_sample_num;
-            //         node_win_num = (TT[hash_index].wins) / (multiple + 1);
-            //     }
-            // }
-            // else{
-            //     TT[hash_index].samples = node_sample_num;
-            //     TT[hash_index].wins = node_win_num;
-            // }
+        //         int shmemSize = 1024 * sizeof(int);
+        //         simulate_kernel<<<1, 1024, shmemSize>>>(d_board, d_node_win_num,
+        //                                     time(NULL), root_board.moving_color);
+        //         cudaDeviceSynchronize();
+        //         cudaError_t err = cudaGetLastError();
+        //         if (err != cudaSuccess) {
+        //             fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
+        //             return -1;
+        //         }
+        //         cudaMemcpy(&node_win_num, d_node_win_num, sizeof(int), cudaMemcpyDeviceToHost);
+
+        //         // for (int j = 0; j < SIMULATION_BATCH_NUM; j++)
+        //         // {
+        //         //     child_boards[i] = nodes[child_idx].board;
+        //         //     if (child_boards[i].simulate(root_board.moving_color) == true)
+        //         //     {
+        //         //         node_win_num += 1;
+        //         //     }
+        //         // }
+        //         node_sample_num += SIMULATION_BATCH_NUM;
+        //     }
             
-            update_node(child_idx, node_win_num, node_sample_num);
+        //     update_node(child_idx, node_win_num, node_sample_num);
 
-            // 4.0: Backpropagation with AMAF
-            #ifdef USE_AMAF
-            #pragma omp critical
-            {
-                AMAF_update_node(child_idx, node_win_num, node_sample_num);
-                AMAF_backpropagate(selected_node, node_win_num, node_sample_num, i);
-            }
-            #endif
+        //     // 4.0: Backpropagation with AMAF
+        //     #ifdef USE_AMAF
+        //     #pragma omp critical
+        //     {
+        //         AMAF_update_node(child_idx, node_win_num, node_sample_num);
+        //         AMAF_backpropagate(selected_node, node_win_num, node_sample_num, i);
+        //     }
+        //     #endif
 
-            // Aggregate results
-            total_sample_num += node_sample_num;
-            total_win_num += node_win_num;
-        }
+        //     // Aggregate results
+        //     total_sample_num += node_sample_num;
+        //     total_win_num += node_win_num;
+        // }
 
         // 4: Backpropagation (all children at once)
         backpropagate(selected_node, total_win_num, total_sample_num);
@@ -521,10 +621,13 @@ int MCTS(Board& root_board) {
     fprintf(stderr, "best WR: %f\n", best_WR);
     fprintf(stderr, "max depth: %d\n", max_depth);
     fprintf(stderr, "expand nodes: %d\n", num_of_nodes);
-    fprintf(stderr, "real total samples: %d\n", nodes[0].Ntotal);
+    fprintf(stderr, "real total samples: %d\n", real_simulation_num);
     #ifdef USE_AMAF
         fprintf(stderr, "amaf total samples: %d\n", nodes[0].AMAF_Ntotal);
     #endif
+
+    cudaFree(d_board);
+    cudaFree(d_node_win_num);
 
     return best_move;
 }
