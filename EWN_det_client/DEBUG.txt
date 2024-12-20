@@ -1,0 +1,107 @@
+<coroutine object MessagePump._process_messages at 0x7f793f264f40>
+<coroutine object MessagePump._process_messages at 0x7f793f5b0400>
+<coroutine object MessagePump._process_messages at 0x7f793f2655d0>
+<coroutine object MessagePump._process_messages at 0x7f793f264d60>
+<coroutine object MessagePump._process_messages at 0x7f793f2657b0>
+<coroutine object MessagePump._process_messages at 0x7f793f266d40>
+<coroutine object Timer._run_timer at 0x7f7944a1be00>
+<coroutine object OnlineArena.stdout_reciever at 0x7f793f21b060>
+<coroutine object MessagePump._process_messages at 0x7f793f5b0220>
+<coroutine object MessagePump._process_messages at 0x7f793f245c60>
+<coroutine object MessagePump._process_messages at 0x7f793f245d50>
+<coroutine object MessagePump._process_messages at 0x7f793f2658a0>
+<coroutine object MessagePump._process_messages at 0x7f793f267b50>
+<coroutine object MessagePump._process_messages at 0x7f793f5b05e0>
+<coroutine object MessagePump._process_messages at 0x7f793f2645e0>
+<coroutine object MessagePump._process_messages at 0x7f793f246a70>
+<coroutine object Timer._run_timer at 0x7f7944a1a400>
+<coroutine object MessagePump._process_messages at 0x7f793f265c60>
+<coroutine object MessagePump._process_messages at 0x7f793f2449a0>
+<coroutine object OnlineArena.stderr_reciever at 0x7f793f55bd30>
+<coroutine object WebSocketCommonProtocol.keepalive_ping at 0x7f793f3a94e0>
+<coroutine object MessagePump._process_messages at 0x7f793f265210>
+<coroutine object MessagePump._process_messages at 0x7f793f246110>
+<coroutine object MessagePump._process_messages at 0x7f793f3a9e40>
+<coroutine object MessagePump._process_messages at 0x7f793f264e50>
+<coroutine object MessagePump._process_messages at 0x7f794495ac50>
+<coroutine object MessagePump._process_messages at 0x7f793f2464d0>
+<coroutine object MessagePump._process_messages at 0x7f793f265030>
+<coroutine object Timer._run_timer at 0x7f794494f850>
+<coroutine object MessagePump._process_messages at 0x7f793f2463e0>
+<coroutine object MessagePump._process_messages at 0x7f793f266e30>
+<coroutine object MessagePump._process_messages at 0x7f793f22fe20>
+<coroutine object WebSocketCommonProtocol.transfer_data at 0x7f793f3a93f0>
+<coroutine object MessagePump._process_messages at 0x7f794495ad40>
+<coroutine object MessagePump._process_messages at 0x7f793f2656c0>
+<coroutine object OnlineArena.main_arena_loop at 0x7f7944956130>
+<coroutine object WebSocketCommonProtocol.close_connection at 0x7f7944a1acf0>
+<coroutine object Timer._run_timer at 0x7f7944a18e10>
+<coroutine object MessagePump._process_messages at 0x7f7944958a90>
+<coroutine object Timer._run_timer at 0x7f794494f100>
+<coroutine object MessagePump._process_messages at 0x7f793f266f20>
+<coroutine object MessagePump._process_messages at 0x7f793f22ff10>
+<coroutine object run.<locals>.wrapper at 0x7f7944cbd080>
+<coroutine object MessagePump._process_messages at 0x7f793f3a8c70>
+<coroutine object MessagePump._process_messages at 0x7f793f245b70>
+<coroutine object MessagePump._process_messages at 0x7f793f244040>
+<coroutine object MessagePump._process_messages at 0x7f793f2465c0>
+<coroutine object MessagePump._process_messages at 0x7f793f5b15d0>
+<coroutine object MessagePump._process_messages at 0x7f793f7b47c0>
+<coroutine object MessagePump._process_messages at 0x7f793f267f10>
+<coroutine object MessagePump._process_messages at 0x7f793f244130>
+<coroutine object MessagePump._process_messages at 0x7f793f244220>
+
+
+
+<Task pending name="message pump Label(id='player2_wl_label')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump FooterKey()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump Board()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Label(id='progress_label')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Label(id='player1_wl_label')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='vertical', window_virtual_size=100, window_size=0, position=0, thickness=2)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='tooltip-timer' coro=<Timer._run_timer() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/timer.py:145> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-1175' coro=<OnlineArena.stdout_reciever() running at /mnt/c/Users/User/Desktop/files/game_theory/HW2/EWN_det_client/EWN_client.pyz/libs/online_arena.py:288> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump FooterKey()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump HeaderTitle()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump HeaderClockSpace()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Label(id='player1_label')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump ScrollBarCorner()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump FooterKey()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='vertical', window_virtual_size=100, window_size=0, position=0, thickness=2)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='horizontal', window_virtual_size=100, window_size=0, position=0)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='screen_update' coro=<Timer._run_timer() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/timer.py:145> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='horizontal', window_virtual_size=100, window_size=0, position=0)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='vertical', window_virtual_size=100, window_size=0, position=0, thickness=2)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-1177' coro=<OnlineArena.stderr_reciever() running at /mnt/c/Users/User/Desktop/files/game_theory/HW2/EWN_det_client/EWN_client.pyz/libs/online_arena.py:313> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-635' coro=<WebSocketCommonProtocol.keepalive_ping() running at /home/whoami9203/.local/lib/python3.12/site-packages/websockets/legacy/protocol.py:1254> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='vertical', window_virtual_size=100, window_size=0, position=0, thickness=2)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump ScrollBarCorner()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump OnlineArena()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump Label()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ToastRack(id='textual-toastrack')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollableDisplay(id='reply_display')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Label(id='player2_label')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='screen_update' coro=<Timer._run_timer() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/timer.py:145> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Vertical(id='left_container')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Horizontal(id='top_left_container')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ToastRack(id='textual-toastrack')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-634' coro=<WebSocketCommonProtocol.transfer_data() running at /home/whoami9203/.local/lib/python3.12/site-packages/websockets/legacy/protocol.py:963> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[Task.task_wakeup()]>
+<Task pending name="message pump Tooltip(id='textual-tooltip')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump Label()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-723' coro=<OnlineArena.main_arena_loop() running at /mnt/c/Users/User/Desktop/files/game_theory/HW2/EWN_det_client/EWN_client.pyz/libs/online_arena.py:739> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-636' coro=<WebSocketCommonProtocol.close_connection() running at /home/whoami9203/.local/lib/python3.12/site-packages/websockets/legacy/protocol.py:1301> wait_for=<Task pending name='Task-634' coro=<WebSocketCommonProtocol.transfer_data() running at /home/whoami9203/.local/lib/python3.12/site-packages/websockets/legacy/protocol.py:963> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[Task.task_wakeup()]>>
+<Task pending name='Animator' coro=<Timer._run_timer() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/timer.py:145> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Screen(id='_default')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='set_interval#1' coro=<Timer._run_timer() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/timer.py:145> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollableDisplay(id='system_display')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump Tooltip(id='textual-tooltip')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='Task-1' coro=<run.<locals>.wrapper() running at /home/whoami9203/.local/lib/python3.12/site-packages/uvloop/__init__.py:61> cb=[run_until_complete.<locals>.done_cb()]>
+<Task pending name="message pump Vertical(id='board_container')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump HeaderIcon()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump Header()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollableDisplay(id='stdout_display')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump FooterKey()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollBar(name='vertical', window_virtual_size=100, window_size=0, position=0, thickness=2)" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name="message pump ScrollableDisplay(id='WR_display')" coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump Horizontal()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+<Task pending name='message pump Footer()' coro=<MessagePump._process_messages() running at /home/whoami9203/.local/lib/python3.12/site-packages/textual/message_pump.py:516> wait_for=<Future pending cb=[Task.task_wakeup()]>>

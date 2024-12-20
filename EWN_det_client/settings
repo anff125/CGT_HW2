@@ -1,0 +1,17 @@
+{
+    "username": "",
+    "password": "",
+    "Online_AI_path": "",
+    "serverIP": "140.112.30.191",
+    "log_game_record": false,
+    "opponent_type_id": "4",
+    "first_mover": "0",
+    "round_num": "100",
+    "time_limit": "60",
+    "Local_AI_1": "/mnt/c/Users/User/Desktop/files/game_theory/HW2/code/cuda_agent",
+    "Local_AI_2": "/mnt/c/Users/User/Desktop/files/game_theory/agents/agent",
+    "Local_first_mover": "0",
+    "Local_round_num": "10",
+    "Local_time_limit": "50",
+    "Thread_num": "1"
+}
