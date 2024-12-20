@@ -204,7 +204,7 @@ bool Board::simulate(int* rave_visits, int* rave_wins) {
 
         int random_index = random_num() % valid_pieces_count;
         int move = valid_pieces[random_index];
-        move += PIECE_NUM * (random_num() % board_copy.move_mutiplier);
+        move += PIECE_NUM * (random_num() % board_copy.move_multiplier);
 
         // rave visited
         int move_id = move / PIECE_NUM;
@@ -306,6 +306,11 @@ int MCTS(Board& root_board) {
                 // Expand one of the untried moves
                 int move = node->num_untried_moves - 1;
                 node->num_untried_moves--;
+
+                if (board.piece_position[board.moving_color ^ 1][(node->num_untried_moves) % 6] == -1) {
+                    continue;
+                }
+                
                 if (board.dice == -1) {
                     board.moving_color ^= 1;
                 } else {

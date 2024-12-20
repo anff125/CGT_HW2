@@ -159,6 +159,7 @@ Node* select_child(Node* node) {
     }
     return best_child;
 }
+
 __global__ void setup_kernel(curandState* state, unsigned long seed) {
     int id = threadIdx.x + blockIdx.x * blockDim.x;
     curand_init(seed, id, 0, &state[id]);
@@ -166,8 +167,14 @@ __global__ void setup_kernel(curandState* state, unsigned long seed) {
 
 __global__ void simulate_kernel(curandState* state, Board* board, int* result, int batch_size) {
     extern __shared__ int local_win[];  // Use dynamic shared memory for results
+
     int thread_id = threadIdx.x;
     int id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (id >= BATCH_SIZE) return;
+
+    local_win[thread_id] = 0;
+    __syncthreads();
+
     // Simulation for each thread
     Board board_copy = *board;
     bool done = false;
@@ -276,11 +283,7 @@ int MCTS(Board& root_board) {
     CHECK_CUDA(cudaGetLastError());
     CHECK_CUDA(cudaDeviceSynchronize());
 
-    call_times++;
-    int this_trial = MAX_SIMULATION_COUNT / (call_times / 2);
-
-    printf("this_trial: %d\n", this_trial);
-    while (total_simulation_count < this_trial) {
+    while (total_simulation_count < MAX_SIMULATION_COUNT) {
         Node* node = root_node;
         Board board = root_board;
 
@@ -297,6 +300,11 @@ int MCTS(Board& root_board) {
             if (node->num_untried_moves > 0) {
                 int move = node->num_untried_moves - 1;
                 node->num_untried_moves--;
+                
+                if (board.piece_position[board.moving_color ^ 1][(node->num_untried_moves) % 6] == -1) {
+                    continue;
+                }
+                
                 if (board.dice == -1) {
                     board.moving_color ^= 1;
                 } else {
